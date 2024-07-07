@@ -5,7 +5,7 @@ export default async function finishSubTaskModel(subTask_id){
         //hacemos la conexción con la base de datos
         const pool = await getPool();
 
-        //hacemos la consulta con la cual mandaremos la informacvión obtenida por argumentos para finalizar la tarea
+        //hacemos la consulta con la cual mandaremos la información obtenida por argumentos para finalizar la tarea
         const [result] = await pool.query (
             `UPDATE subtask
             SET done = true

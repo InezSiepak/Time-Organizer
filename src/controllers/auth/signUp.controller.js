@@ -1,64 +1,71 @@
-
+import Joi from "joi";
 import signUpModel from "../../models/auth/signUp.model.js";
 import generateToken from "../../services/generateToken.js";
-import Joi from "joi";
 import sendMail from "../../services/sendMail.js";
+import joiErrorMessages from "../../validations/joiErrorMessages.js";
 
 export default async function signUpController(req, res, next) {
-    try {
-        const newUserSchema = Joi.object({
-            username: Joi.string().required(),
-            password: Joi.string().required(),
-            email: Joi.string().email().required(),
-          });
-      
-          const { error, value } = newUserSchema.validate(req.body);
-          if (error) {
-            return res.status(400).json({
-              ok: false,
-              message: error.details[0].message,
-            });
-          }
-        
-        const {username, email, password} = value;
+  try {
+    const newUserSchema = Joi.object({
+      username: Joi.string()
+      .required()
+      .messages(joiErrorMessages),
+      email: Joi.string()
+      .email()
+      .required()
+      .messages(joiErrorMessages),
+      password: Joi.string()
+      .min(8)
+      .max(200)
+      .required()
+      .messages(joiErrorMessages),
+    });
 
-        //Validar lo datos
-        // if([username, email, password].includes("") || ([username, email, password]).includes(undefined)) {
-        //     let error = new Error("Todos los campos son requeridos");
-        //     error.status= 400;
-        //     throw error;
-        // }
+    const { error, value } = newUserSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        ok: false,
+        message: error.details[0].message,
+      });
+    }
 
-        //Generar token aleatorio
-        const token = generateToken();
-        
-        const {message} = await signUpModel(username, email, password, token);
+    const { username, email, password } = value;
 
-        const emailSubject = "Confirma tu registracion en Time Organizer";
+    //Generar token aleatorio
+    const token = generateToken();
 
-        const emailLink = `${req.protocol}://${req.get('host')}/users/confirm?token=${token}`;
+    const { message } = await signUpModel(username, email, password, token);
 
-        const emailBody = `
-        <!DOCTYPE html>
+    console.log(req.protocol);
+
+    const emailSubject = "Confirma tu registro en Time Organizer.";
+
+    //link para confirmar el registro
+    const emailLink = `${req.protocol}://${req.get(
+      "host"
+    )}/users/confirm?token=${token}`;
+
+    //cuerpo del mail
+    const emailBody = `
+          <!DOCTYPE html>
           <html lang="es">
           <body>
-              <h2>Bienvenid@ ${username}</h2>
-              <h4>Gracias por registrate en Time Organizer</h4>
+              <h2>¡Bienvenid@ ${username}!</h2>
+              <h3>Gracias por registrate en Time Organizer.</h3>
               <hr>
-              <p>Haz click en el siguiente <a href="${emailLink}">enlace</a> para confirmar tu registración</p>
+              <h3>Haz click en el siguiente <a href="${emailLink}">enlace</a> para completar tu registro.</h3>
           </body>
           </html>
-          `
+        `;
 
-        await sendMail(email, emailSubject, emailBody);
+    await sendMail(email, emailSubject, emailBody);
 
-        return res.status(201).json({
-            ok: true,
-            message,
-        });
-
-    } catch (error) {
-        console.log(error)
-        next(error);
-    }
+    return res.status(201).json({
+      ok: true,
+      message,
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
 }
